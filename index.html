@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Constatazione Amichevole</title>
+<meta name="description" content="Compila in pochi minuti la constatazione amichevole (CAI) dopo un incidente tra due veicoli: dati, circostanze, foto, schizzo, firme e riepilogo in PDF.">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar no-print">
+  <div class="brand">
+    <img src="icon.svg" alt="" width="28" height="28">
+    <span>Constatazione Amichevole</span>
+  </div>
+  <button id="menuBtn" class="ghost" aria-label="Menu">☰</button>
+</header>
+
+<nav id="menu" class="menu no-print" hidden>
+  <button data-action="profile">👤 I miei dati salvati</button>
+  <button data-action="export">💾 Esporta backup (.json)</button>
+  <button data-action="import">📂 Importa backup</button>
+  <button data-action="reset" class="danger">🗑️ Nuova constatazione (cancella tutto)</button>
+  <input type="file" id="importFile" accept="application/json" hidden>
+</nav>
+
+<div class="progress no-print"><div id="progressBar"></div></div>
+<ol id="stepper" class="stepper no-print"></ol>
+
+<main id="app"></main>
+
+<footer class="bottombar no-print">
+  <button id="prevBtn" class="secondary">← Indietro</button>
+  <span id="stepLabel"></span>
+  <button id="nextBtn" class="primary">Avanti →</button>
+</footer>
+
+<div id="modal" class="modal no-print" hidden>
+  <div class="modal-box">
+    <div id="modalBody"></div>
+    <div class="modal-actions"><button class="secondary" data-close>Chiudi</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast no-print" hidden></div>
+
+<script src="vendor/qrcode.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
