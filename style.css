@@ -161,6 +161,14 @@ button:disabled { opacity: .45; cursor: default; }
 .shot { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--line); background: var(--bg); min-height: 44px; }
 .shot.done { border-style: solid; border-color: var(--ok); color: var(--ok); font-weight: 600; }
 
+/* OCR */
+.ocr-bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.ocr-bar div { height: 100%; width: 0; background: var(--primary); transition: width .2s; }
+.ocr-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); }
+.ocr-row > input[type=checkbox] { width: 22px; height: 22px; margin-top: 22px; flex: none; accent-color: var(--primary); }
+label.ocr-row > input[type=checkbox] { margin-top: 0; }
+.ocr-raw { white-space: pre-wrap; max-height: 200px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 8px; font-size: 12px; }
+
 /* Archivio */
 .arch-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--line); }
 

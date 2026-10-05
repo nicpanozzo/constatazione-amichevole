@@ -456,6 +456,7 @@ function viewParty(X) {
       h('button', { class: 'secondary', onclick: () => showShareQR(X) }, '📤 Passa questi dati all\'altro telefono'),
       h('button', { class: 'secondary', onclick: () => showReceiveHelp(X) }, '📥 Ricevi dati dall\'altro conducente'),
     )));
+  if (typeof ocrCard === 'function') f.append(ocrCard(X));
 
   const warn = checks().filter(c => c.X === X);
   if (warn.length) f.append(h('div', { class: 'card alert' }, h('strong', {}, 'Da ricontrollare'), h('ul', { class: 'warn-list' }, warn.map(c => h('li', {}, c.msg)))));

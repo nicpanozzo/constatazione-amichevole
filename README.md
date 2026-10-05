@@ -8,6 +8,7 @@ Sito web (statico, mobile-first, in italiano) che guida i due conducenti nella c
 - **Tutte le sezioni del modulo CAI**: data, luogo (con GPS e indirizzo automatico), feriti, testimoni, contraente, veicolo, assicurazione, conducente, punto d'urto, danni, le 17 circostanze, grafico, osservazioni, firme.
 - **Passaggio dati tra i due telefoni con QR code**: ognuno compila i propri dati e li passa all'altro.
 - **Passaggio dell'intera constatazione** (con foto, schizzo e firme) come file, così entrambi ne hanno una copia identica.
+- **Compilazione automatica dalle foto dei documenti (OCR)**: libretto, patente e certificato di assicurazione vengono letti sul telefono con Tesseract.js; i campi riconosciuti (targa, marca e modello, intestatario, nome, data di nascita, numero e scadenza patente, categorie, compagnia, polizza, validità, codice fiscale) vanno confermati prima di essere inseriti.
 - **"I miei dati salvati"**: salvi in anticipo auto, assicurazione e patente e li inserisci con un tocco.
 - **Circostanze anche in inglese** (stessa numerazione del modulo europeo) per un conducente straniero.
 - **Controlli automatici**: polizza scaduta o non ancora valida, patente scaduta, targa italiana dal formato insolito, stessa targa su A e B.
@@ -22,7 +23,7 @@ Sito web (statico, mobile-first, in italiano) che guida i due conducenti nella c
 
 ## Privacy
 
-Nessun backend: tutti i dati restano nel browser del dispositivo (IndexedDB / localStorage). Il passaggio dati tra telefoni avviene tramite il QR code, il link o il file .json, che contengono i dati stessi. L'unica chiamata esterna opzionale è a OpenStreetMap Nominatim per trasformare la posizione GPS in indirizzo.
+Nessun backend: tutti i dati restano nel browser del dispositivo (IndexedDB / localStorage). Il passaggio dati tra telefoni avviene tramite il QR code, il link o il file .json, che contengono i dati stessi. La lettura dei documenti (OCR) avviene interamente nel browser: motore e modello sono serviti dal sito stesso e le foto non vengono inviate. L'unica chiamata esterna opzionale è a OpenStreetMap Nominatim per trasformare la posizione GPS in indirizzo.
 
 ## Avvio in locale
 
@@ -38,6 +39,7 @@ e aprire http://localhost:8000.
 
 - [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT)
 - [jsPDF](https://github.com/parallax/jsPDF) (MIT)
+- [Tesseract.js](https://github.com/naptha/tesseract.js) e tesseract.js-core (Apache 2.0) con il modello italiano `ita` (tessdata_best_int, Apache 2.0)
 
 ## Pubblicazione
 
