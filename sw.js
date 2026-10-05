@@ -1,6 +1,7 @@
 // Cache dell'app per funzionare anche senza connessione sul luogo dell'incidente.
-const CACHE = 'cai-v1';
-const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest', 'vendor/qrcode.js'];
+const CACHE = 'cai-v2';
+const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest', 'vendor/qrcode.js',
+  'pdf.js', 'vendor/jspdf.umd.min.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

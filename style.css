@@ -156,6 +156,14 @@ button:disabled { opacity: .45; cursor: default; }
 .photo input { border: 0; border-top: 1px solid var(--line); border-radius: 0; min-height: 36px; padding: 6px 8px; font-size: 13px; }
 .photo .del { position: absolute; top: 6px; right: 6px; background: #000a; color: #fff; border: 0; border-radius: 50%; width: 30px; height: 30px; }
 
+/* Foto consigliate */
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.shot { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--line); background: var(--bg); min-height: 44px; }
+.shot.done { border-style: solid; border-color: var(--ok); color: var(--ok); font-weight: 600; }
+
+/* Archivio */
+.arch-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--line); }
+
 /* Riepilogo */
 .sum-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 @media (min-width: 620px) { .sum-grid { grid-template-columns: 1fr 1fr; } }

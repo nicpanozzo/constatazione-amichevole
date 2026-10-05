@@ -23,6 +23,32 @@ const CIRCOSTANZE = [
   'non aveva osservato il segnale di precedenza o di semaforo rosso',
 ];
 
+// Stessa numerazione del modulo europeo: utile con un conducente straniero.
+const CIRCOSTANZE_EN = [
+  'parked / stopped',
+  'leaving a parking place / opening a door',
+  'entering a parking place',
+  'emerging from a car park, from private grounds, from a track',
+  'entering a car park, private grounds, a track',
+  'entering a roundabout',
+  'circulating in a roundabout',
+  'striking the rear of the other vehicle while going in the same direction and in the same lane',
+  'going in the same direction but in a different lane',
+  'changing lanes',
+  'overtaking',
+  'turning to the right',
+  'turning to the left',
+  'reversing',
+  'encroaching on a lane reserved for traffic in the opposite direction',
+  'coming from the right (at a junction)',
+  'had not observed a right-of-way sign or a red light',
+];
+
+const PHOTO_SHOTS = [
+  'Targa A', 'Targa B', 'Danni veicolo A', 'Danni veicolo B', 'Veicolo A intero', 'Veicolo B intero',
+  'Posizione dei veicoli', 'Segnaletica / incrocio', 'Documenti A', 'Documenti B',
+];
+
 const ZONE = [
   // id, etichetta, x, y, w, h  (auto vista dall'alto, muso in alto)
   ['ant-sx', 'Anteriore sinistro', 20, 10, 50, 45],
@@ -114,9 +140,10 @@ function emptyParty() {
   p.urto = []; p.danni = ''; p.circ = []; p.osservazioni = '';
   return p;
 }
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function emptyState() {
   return {
-    v: 1, step: 0, safety: [],
+    v: 1, id: newId(), step: 0, safety: [],
     incidente: { paese: 'Italia' },
     A: emptyParty(), B: emptyParty(),
     sketch: [], photos: [], firme: { A: '', B: '' },
@@ -430,9 +457,16 @@ function viewParty(X) {
       h('button', { class: 'secondary', onclick: () => showReceiveHelp(X) }, '📥 Ricevi dati dall\'altro conducente'),
     )));
 
+  const warn = checks().filter(c => c.X === X);
+  if (warn.length) f.append(h('div', { class: 'card alert' }, h('strong', {}, 'Da ricontrollare'), h('ul', { class: 'warn-list' }, warn.map(c => h('li', {}, c.msg)))));
+
   PARTY_SECTIONS.forEach(sec => {
     const card = h('div', { class: 'card v' + X }, h('h3', { style: 'margin-top:0' }, sec.title));
     if (sec.hint) card.append(h('p', { class: 'muted small', style: 'margin-top:0' }, sec.hint));
+    if (sec.key === 'assic') {
+      card.append(h('p', { class: 'small', style: 'margin-top:0' }, 'Non trovi i dati? Puoi verificare compagnia e copertura dalla targa sul ',
+        h('a', { href: 'https://www.ilportaledellautomobilista.it/web/portale-automobilista/verifica-copertura-rc', target: '_blank', rel: 'noopener' }, 'Portale dell\'Automobilista'), '.'));
+    }
     if (sec.copyFrom) {
       card.append(h('div', { class: 'btn-row', style: 'margin:0 0 10px' }, h('button', {
         class: 'secondary', onclick: () => {
@@ -575,6 +609,10 @@ function viewCirc() {
   const f = document.createDocumentFragment();
   f.append(h('h1', {}, 'Circostanze'),
     h('p', { class: 'lead' }, 'Sezione 12: segnate solo le caselle utili a descrivere l\'incidente, per ciascun veicolo.'));
+  const en = lsGet('cai_circ_en') === true;
+  f.append(h('div', { class: 'btn-row', style: 'margin:0 0 4px' }, h('button', {
+    class: 'secondary', onclick: () => { lsSet('cai_circ_en', !en); render(); },
+  }, en ? '🇮🇹 Solo italiano' : '🇬🇧 Mostra anche in inglese (conducente straniero)')));
   const tA = h('td', { class: 'chk' }), tB = h('td', { class: 'chk' });
   const upd = () => { tA.textContent = S.A.circ.length; tB.textContent = S.B.circ.length; renderStepper(); };
   const tb = h('tbody');
@@ -587,7 +625,8 @@ function viewCirc() {
         save(); upd();
       },
     }));
-    tb.append(h('tr', {}, cb('A'), h('td', { class: 'n' }, n), h('td', {}, t), cb('B')));
+    tb.append(h('tr', {}, cb('A'), h('td', { class: 'n' }, n),
+      h('td', {}, t, en && h('div', { class: 'small muted', lang: 'en' }, CIRCOSTANZE_EN[i])), cb('B')));
   });
   const table = h('table', { class: 'circ-table' },
     h('thead', {}, h('tr', {}, h('th', { class: 'cA' }, 'A'), h('th'), h('th', { style: 'text-align:left' }, 'Il veicolo…'), h('th', { class: 'cB' }, 'B'))),
@@ -775,7 +814,7 @@ function viewFoto() {
   f.append(h('h1', {}, 'Foto'),
     h('p', { class: 'lead' }, 'Fotografa: entrambi i veicoli da più lati, le targhe, i danni da vicino, la scena con la posizione delle auto, i segnali stradali e i documenti (libretto, assicurazione, patente).'));
   const grid = h('div', { class: 'photos' });
-  const draw = () => {
+  let draw = () => {
     grid.innerHTML = '';
     if (!S.photos.length) grid.append(h('p', { class: 'muted' }, 'Nessuna foto ancora.'));
     S.photos.forEach((p, i) => {
@@ -796,19 +835,30 @@ function viewFoto() {
     }
     await saveNow(); draw(); renderStepper();
   };
-  const mkInput = (capture, tag) => {
-    const inp = h('input', { type: 'file', accept: 'image/*', multiple: !capture, hidden: true, capture: capture ? 'environment' : null });
-    inp.addEventListener('change', () => { add([...inp.files], tag); inp.value = ''; });
-    return inp;
+  const cam = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
+  const gal = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+  let tag = '';
+  cam.addEventListener('change', () => { add([...cam.files], tag); cam.value = ''; });
+  gal.addEventListener('change', () => { add([...gal.files], ''); gal.value = ''; });
+  const shoot = t => { tag = t; cam.click(); };
+  const shots = h('div', { class: 'shots' });
+  const drawShots = () => {
+    shots.innerHTML = '';
+    PHOTO_SHOTS.forEach(t => {
+      const done = S.photos.some(p => p.caption === t);
+      shots.append(h('button', { class: 'shot' + (done ? ' done' : ''), onclick: () => shoot(t) }, done ? '✓ ' : '📷 ', t));
+    });
   };
-  const camA = mkInput(true, 'Veicolo A'), camB = mkInput(true, 'Veicolo B'), camS = mkInput(true, 'Scena'), gal = mkInput(false, '');
+  const redraw = draw;
+  draw = () => { redraw(); drawShots(); };
   f.append(h('div', { class: 'card' },
-    h('div', { class: 'btn-row', style: 'margin-top:0' },
-      h('button', { class: 'primary', onclick: () => camA.click() }, '📷 Foto veicolo A'),
-      h('button', { class: 'primary', onclick: () => camB.click() }, '📷 Foto veicolo B'),
-      h('button', { class: 'primary', onclick: () => camS.click() }, '📷 Foto scena'),
+    h('h3', { style: 'margin-top:0' }, 'Foto consigliate'),
+    h('p', { class: 'muted small', style: 'margin-top:0' }, 'Tocca una voce per scattare: la foto viene già descritta. Le voci con ✓ sono fatte.'),
+    shots,
+    h('div', { class: 'btn-row' },
+      h('button', { class: 'primary', onclick: () => shoot('') }, '📷 Altra foto'),
       h('button', { class: 'secondary', onclick: () => gal.click() }, '🖼️ Dalla galleria'),
-    ), camA, camB, camS, gal));
+    ), cam, gal));
   f.append(h('div', { class: 'card' }, grid));
   draw();
   return f;
@@ -874,6 +924,32 @@ function missing() {
   return m;
 }
 
+function addDays(iso, n) {
+  const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* Controlli che non bloccano ma segnalano possibili errori */
+function checks() {
+  const out = [];
+  const day = S.incidente.data;
+  ['A', 'B'].forEach(X => {
+    const P = S[X];
+    const it = !P.veicolo.statoImm || /^ital/i.test(P.veicolo.statoImm);
+    const t = (P.veicolo.targa || '').replace(/[\s-]/g, '');
+    if (t && it && (P.veicolo.tipo || 'Autovettura') === 'Autovettura' && !/^[A-Z]{2}\d{3}[A-Z]{2}$/.test(t))
+      out.push({ X, msg: `Targa ${X} "${P.veicolo.targa}": formato insolito per un'auto italiana (es. AB123CD), ricontrolla.` });
+    if (day && P.assic.validaAl && P.assic.validaAl < day)
+      out.push({ X, msg: `Assicurazione ${X} scaduta il ${fmtDate(P.assic.validaAl)}, prima dell'incidente. In questo caso conviene chiamare le forze dell'ordine.` });
+    if (day && P.assic.validaDal && P.assic.validaDal > day)
+      out.push({ X, msg: `Assicurazione ${X} valida solo dal ${fmtDate(P.assic.validaDal)}, dopo l'incidente.` });
+    if (day && P.conducente.patenteScad && P.conducente.patenteScad < day)
+      out.push({ X, msg: `Patente del conducente ${X} scaduta il ${fmtDate(P.conducente.patenteScad)}.` });
+  });
+  if (S.A.veicolo.targa && S.A.veicolo.targa === S.B.veicolo.targa) out.push({ msg: 'I veicoli A e B hanno la stessa targa.' });
+  return out;
+}
+
 function partySummary(X) {
   const P = S[X];
   const yn = v => (v === 'si' ? 'Sì' : v === 'no' ? 'No' : '');
@@ -920,14 +996,18 @@ function viewRiepilogo() {
 
   f.append(h('div', { class: 'no-print' },
     h('h1', {}, 'Riepilogo'),
-    h('p', { class: 'lead' }, 'Controllate insieme i dati. Poi salvate il PDF: con "Stampa / PDF" scegli "Salva come PDF" come stampante.'),
+    h('p', { class: 'lead' }, 'Controllate insieme i dati, poi scaricate il PDF e passate la constatazione all\'altro conducente.'),
     miss.length ? h('div', { class: 'card alert' }, h('strong', {}, 'Mancano ancora:'), h('ul', { class: 'warn-list' }, miss.map(m => h('li', {}, m))))
       : h('div', { class: 'card', style: 'border-color:var(--ok)' }, '✅ Tutti i dati principali sono compilati.'),
+    checks().length ? h('div', { class: 'card alert' }, h('strong', {}, 'Da ricontrollare:'), h('ul', { class: 'warn-list' }, checks().map(c => h('li', {}, c.msg)))) : null,
     h('div', { class: 'btn-row' },
-      h('button', { class: 'primary', onclick: () => window.print() }, '🖨️ Stampa / Salva PDF'),
-      navigator.share && h('button', { class: 'secondary', onclick: shareSummary }, '📤 Condividi riepilogo (testo)'),
-      h('button', { class: 'secondary', onclick: exportJSON }, '💾 Backup dati (.json)'),
+      h('button', { class: 'primary', onclick: e => makePDF('download', e.currentTarget) }, '📄 Scarica PDF'),
+      canShareFiles() && h('button', { class: 'primary', onclick: e => makePDF('share', e.currentTarget) }, '📤 Invia PDF (WhatsApp, e-mail…)'),
+      h('button', { class: 'secondary', onclick: shareFull }, '📲 Passa tutto all\'altro conducente'),
+      h('button', { class: 'secondary', onclick: () => window.print() }, '🖨️ Stampa'),
+      navigator.share && h('button', { class: 'secondary', onclick: shareSummary }, '💬 Condividi come testo'),
     ),
+    deadlineCard(),
   ));
 
   f.append(h('div', { class: 'print-only' },
@@ -972,6 +1052,30 @@ function viewRiepilogo() {
   return f;
 }
 
+function deadlineCard() {
+  const d = S.incidente.data;
+  if (!d) return null;
+  const due = addDays(d, 3);
+  return h('div', { class: 'card' },
+    h('strong', {}, '⏰ Denuncia alla tua assicurazione entro il ' + fmtDate(due)),
+    h('p', { class: 'small muted', style: 'margin:4px 0 0' }, 'Hai 3 giorni dall\'incidente. Invia il modulo CAI e il PDF con le foto alla tua compagnia o alla tua agenzia.'),
+    h('div', { class: 'btn-row' },
+      h('button', { class: 'secondary', onclick: () => downloadICS(due) }, '📅 Aggiungi promemoria al calendario')));
+}
+
+function downloadICS(due) {
+  const ymd = due.replace(/-/g, '');
+  const targhe = ['A', 'B'].map(X => S[X].veicolo.targa).filter(Boolean).join(' / ');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Constatazione Amichevole//IT', 'BEGIN:VEVENT',
+    `UID:${S.id}@constatazione-amichevole`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
+    `DTSTART;VALUE=DATE:${ymd}`, `DTEND;VALUE=DATE:${addDays(due, 1).replace(/-/g, '')}`,
+    `SUMMARY:Denuncia sinistro all'assicurazione${targhe ? ' (' + targhe + ')' : ''}`,
+    `DESCRIPTION:Ultimo giorno per inviare la constatazione amichevole dell'incidente del ${fmtDate(S.incidente.data)}.`,
+    'BEGIN:VALARM', 'TRIGGER:-PT12H', 'ACTION:DISPLAY', 'DESCRIPTION:Denuncia sinistro', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  downloadBlob(new Blob([ics], { type: 'text/calendar' }), 'promemoria-denuncia.ics');
+}
+
 function summaryText() {
   const I = S.incidente;
   const lines = [`CONSTATAZIONE AMICHEVOLE – ${fmtDate(I.data)} ${I.ora || ''}`, `Luogo: ${[I.luogo, I.comune, I.paese].filter(Boolean).join(', ')}${I.coords ? ' (' + I.coords + ')' : ''}`, ''];
@@ -988,13 +1092,87 @@ function summaryText() {
 }
 function shareSummary() { navigator.share({ title: 'Constatazione amichevole', text: summaryText() }).catch(() => {}); }
 
-/* ---------- Backup ---------- */
+/* ---------- File, condivisione e archivio ---------- */
+
+function downloadBlob(blob, name) {
+  const a = h('a', { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function canShareFiles() {
+  try { return !!navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.pdf', { type: 'application/pdf' })] }); } catch { return false; }
+}
+async function shareOrDownload(blob, name, title) {
+  const file = new File([blob], name, { type: blob.type });
+  if (canShareFiles()) {
+    try { await navigator.share({ files: [file], title }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  downloadBlob(blob, name);
+}
+function fileBase() {
+  const t = ['A', 'B'].map(X => S[X].veicolo.targa).filter(Boolean).join('-');
+  return `constatazione-${S.incidente.data || 'bozza'}${t ? '-' + t : ''}`.replace(/[^\w-]/g, '');
+}
 
 function exportJSON() {
+  downloadBlob(new Blob([JSON.stringify(S)], { type: 'application/json' }), fileBase() + '.json');
+}
+
+/* Passa l'intera constatazione (con foto, schizzo e firme) all'altro telefono */
+function shareFull() {
   const blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
-  const a = h('a', { href: URL.createObjectURL(blob), download: `constatazione-${S.incidente.data || 'bozza'}.json` });
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  modal(h('div', {},
+    h('h3', { style: 'margin-top:0' }, '📲 Passa tutto all\'altro conducente'),
+    h('p', {}, 'Invia il file della constatazione (WhatsApp, e-mail, AirDrop, Bluetooth…). L\'altro conducente apre questo sito, menu ☰ → "Apri constatazione ricevuta" e sceglie il file: vedrà gli stessi dati, foto, schizzo e firme.'),
+    h('div', { class: 'btn-row' },
+      h('button', { class: 'primary', onclick: () => shareOrDownload(blob, fileBase() + '.json', 'Constatazione amichevole') }, canShareFiles() ? '📤 Invia file' : '💾 Scarica file'))));
+}
+
+function hasData(st) {
+  return !!(st && (st.A?.veicolo?.targa || st.B?.veicolo?.targa || st.incidente?.luogo || st.photos?.length || st.sketch?.length));
+}
+function stateTitle(st) {
+  const t = ['A', 'B'].map(X => st[X]?.veicolo?.targa).filter(Boolean).join(' / ');
+  return [fmtDate(st.incidente?.data), st.incidente?.comune || st.incidente?.luogo, t].filter(Boolean).join(' · ') || 'Bozza senza dati';
+}
+async function archiveList() { return (await DB.get('archive')) || []; }
+async function archiveCurrent() {
+  if (!hasData(S)) return;
+  S.id ||= newId();
+  const list = (await archiveList()).filter(x => x.id !== S.id);
+  list.unshift({ id: S.id, title: stateTitle(S), savedAt: Date.now() });
+  await DB.set('arch:' + S.id, JSON.parse(JSON.stringify(S)));
+  await DB.set('archive', list);
+}
+function normalize(st) {
+  const out = Object.assign(emptyState(), st);
+  ['A', 'B'].forEach(X => { out[X] = Object.assign(emptyParty(), out[X]); PARTY_SECTIONS.forEach(s => { out[X][s.key] ||= {}; }); });
+  out.incidente ||= {}; out.firme ||= { A: '', B: '' };
+  return out;
+}
+async function loadState(st, msg) {
+  await archiveCurrent();
+  S = normalize(st); await saveNow(); render(); window.scrollTo({ top: 0 }); toast(msg);
+}
+
+async function openArchive() {
+  const list = await archiveList();
+  const box = h('div', {}, h('h3', { style: 'margin-top:0' }, '📚 Constatazioni salvate'));
+  if (!list.length) box.append(h('p', { class: 'muted' }, 'Nessuna constatazione archiviata. Quando ne inizi una nuova, quella attuale viene salvata qui.'));
+  list.forEach(item => {
+    const cur = item.id === S.id;
+    box.append(h('div', { class: 'arch-row' },
+      h('div', {}, h('strong', {}, item.title), h('div', { class: 'small muted' }, (cur ? 'Aperta ora · ' : '') + 'salvata il ' + new Date(item.savedAt).toLocaleString('it-IT'))),
+      h('div', { class: 'btn-row', style: 'margin:0' },
+        !cur && h('button', { class: 'secondary', onclick: async () => { const st = await DB.get('arch:' + item.id); closeModal(); if (st) loadState(st, 'Constatazione riaperta'); } }, 'Apri'),
+        h('button', { class: 'secondary', 'aria-label': 'Elimina', onclick: async e => {
+          const b = e.currentTarget;
+          if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Conferma eliminazione'; return; }
+          await DB.set('archive', (await archiveList()).filter(x => x.id !== item.id)); await DB.set('arch:' + item.id, null);
+          closeModal(); openArchive();
+        } }, '🗑️'))));
+  });
+  modal(box);
 }
 
 /* ---------- Menu ---------- */
@@ -1005,10 +1183,11 @@ $('#menu').addEventListener('click', async e => {
   if (!a) return;
   $('#menu').hidden = true;
   if (a === 'profile') openProfile();
+  if (a === 'archive') openArchive();
   if (a === 'export') exportJSON();
   if (a === 'import') $('#importFile').click();
-  if (a === 'reset' && confirm('Cancellare tutti i dati di questa constatazione? (I tuoi dati salvati restano)')) {
-    S = emptyState(); await saveNow(); render(); toast('Nuova constatazione');
+  if (a === 'new' && confirm('Iniziare una nuova constatazione? Quella attuale viene salvata nell\'archivio.')) {
+    await archiveCurrent(); S = emptyState(); await saveNow(); render(); toast('Nuova constatazione');
   }
 });
 $('#importFile').addEventListener('change', async e => {
@@ -1016,19 +1195,25 @@ $('#importFile').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await file.text());
     if (!data.A || !data.B) throw new Error();
-    S = Object.assign(emptyState(), data); await saveNow(); render(); toast('Backup importato');
-  } catch { toast('File non valido'); }
+    await loadState(data, 'Constatazione aperta' + (hasData(S) ? ' (quella precedente è nell\'archivio)' : ''));
+  } catch { toast('File non valido: serve un file .json creato da questo sito'); }
   e.target.value = '';
 });
+
+/* Tiene lo schermo acceso mentre si compila */
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch { /* non supportato */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (!wakeLock || wakeLock.released)) keepAwake(); });
 
 /* ---------- Avvio ---------- */
 
 (async () => {
   const saved = await DB.get('state');
-  if (saved && saved.A && saved.B) {
-    S = Object.assign(emptyState(), saved);
-    ['A', 'B'].forEach(X => { S[X] = Object.assign(emptyParty(), S[X]); });
-  }
+  if (saved && saved.A && saved.B) S = normalize(saved);
+  if (!S.id) { S.id = newId(); save(); }
+  keepAwake();
   render();
   handleIncomingHash();
   window.addEventListener('hashchange', handleIncomingHash);

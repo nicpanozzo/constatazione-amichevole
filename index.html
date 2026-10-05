@@ -20,10 +20,11 @@
 </header>
 
 <nav id="menu" class="menu no-print" hidden>
+  <button data-action="new">➕ Nuova constatazione</button>
+  <button data-action="archive">📚 Constatazioni salvate</button>
+  <button data-action="import">📂 Apri constatazione ricevuta (.json)</button>
   <button data-action="profile">👤 I miei dati salvati</button>
-  <button data-action="export">💾 Esporta backup (.json)</button>
-  <button data-action="import">📂 Importa backup</button>
-  <button data-action="reset" class="danger">🗑️ Nuova constatazione (cancella tutto)</button>
+  <button data-action="export">💾 Scarica backup (.json)</button>
   <input type="file" id="importFile" accept="application/json" hidden>
 </nav>
 
@@ -48,6 +49,7 @@
 <div id="toast" class="toast no-print" hidden></div>
 
 <script src="vendor/qrcode.js" defer></script>
+<script src="pdf.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>
